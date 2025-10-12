@@ -1,17 +1,34 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, Upload, ArrowRight, User } from "lucide-react";
+import { Camera, Upload, ArrowRight, User, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { toast } from "sonner";
+import { removeBackground, loadImage, blobToDataUrl } from "@/lib/backgroundRemoval";
 
 const Setup = () => {
   const navigate = useNavigate();
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
   const [clothingItems, setClothingItems] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    const savedAvatar = localStorage.getItem('avatarImage');
+    const savedItems = localStorage.getItem('clothingItems');
+    
+    if (savedAvatar) {
+      setAvatarImage(savedAvatar);
+    }
+    if (savedItems) {
+      setClothingItems(JSON.parse(savedItems));
+    }
+  }, []);
 
   const captureAvatar = async () => {
     try {
+      setIsProcessing(true);
+      toast.info("Capturing photo...");
+      
       const image = await CapCamera.getPhoto({
         quality: 90,
         allowEditing: true,
@@ -22,12 +39,22 @@ const Setup = () => {
       });
       
       if (image.dataUrl) {
-        setAvatarImage(image.dataUrl);
-        toast.success("Body photo captured!");
+        toast.info("Removing background...");
+        
+        // Remove background
+        const img = await loadImage(image.dataUrl);
+        const processedBlob = await removeBackground(img);
+        const processedDataUrl = await blobToDataUrl(processedBlob);
+        
+        setAvatarImage(processedDataUrl);
+        localStorage.setItem('avatarImage', processedDataUrl);
+        toast.success("Body photo captured and processed!");
       }
     } catch (error) {
       console.error('Error capturing photo:', error);
-      toast.error("Failed to capture photo");
+      toast.error("Failed to process photo");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -41,8 +68,10 @@ const Setup = () => {
       });
       
       if (image.dataUrl) {
-        setClothingItems([...clothingItems, image.dataUrl]);
-        toast.success(`${clothingItems.length + 1} items captured`);
+        const newItems = [...clothingItems, image.dataUrl];
+        setClothingItems(newItems);
+        localStorage.setItem('clothingItems', JSON.stringify(newItems));
+        toast.success(`${newItems.length} items captured`);
       }
     } catch (error) {
       console.error('Error capturing photo:', error);
@@ -93,34 +122,57 @@ const Setup = () => {
           </div>
 
           {avatarImage ? (
-            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-medium mb-4">
+            <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-medium mb-4 bg-muted">
               <img 
                 src={avatarImage} 
                 alt="Your avatar" 
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
               <Button
                 variant="secondary"
                 size="sm"
                 className="absolute top-4 right-4"
                 onClick={captureAvatar}
+                disabled={isProcessing}
               >
-                <Camera className="w-4 h-4 mr-2" />
-                Retake
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-4 h-4 mr-2" />
+                    Retake
+                  </>
+                )}
               </Button>
             </div>
           ) : (
             <button
               onClick={captureAvatar}
-              className="w-full aspect-[3/4] rounded-2xl border-2 border-dashed border-border bg-muted/30 hover:bg-muted/50 transition-colors flex flex-col items-center justify-center gap-4 group"
+              disabled={isProcessing}
+              className="w-full aspect-[3/4] rounded-2xl border-2 border-dashed border-border bg-muted/30 hover:bg-muted/50 transition-colors flex flex-col items-center justify-center gap-4 group disabled:opacity-50"
             >
-              <div className="w-20 h-20 rounded-full bg-gradient-accent flex items-center justify-center group-hover:scale-110 transition-transform">
-                <User className="w-10 h-10 text-accent-foreground" />
-              </div>
-              <div className="text-center">
-                <p className="font-semibold text-foreground mb-1">Take a full body photo</p>
-                <p className="text-sm text-muted-foreground">Stand straight, well-lit area</p>
-              </div>
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-20 h-20 text-primary animate-spin" />
+                  <div className="text-center">
+                    <p className="font-semibold text-foreground mb-1">Processing...</p>
+                    <p className="text-sm text-muted-foreground">Removing background</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-20 h-20 rounded-full bg-gradient-accent flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <User className="w-10 h-10 text-accent-foreground" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold text-foreground mb-1">Take a full body photo</p>
+                    <p className="text-sm text-muted-foreground">Stand straight, well-lit area</p>
+                  </div>
+                </>
+              )}
             </button>
           )}
         </div>

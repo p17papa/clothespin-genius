@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, TouchEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Shuffle, Heart, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Shuffle, Heart, X, RefreshCw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -17,6 +17,10 @@ const Stylist = () => {
   const [currentOutfit, setCurrentOutfit] = useState<OutfitCombination>({});
   const [currentIndices, setCurrentIndices] = useState({ top: 0, bottom: 0, shoes: 0 });
   const [likedOutfits, setLikedOutfits] = useState<OutfitCombination[]>([]);
+  const [activeSwipeZone, setActiveSwipeZone] = useState<'top' | 'bottom' | 'shoes' | null>(null);
+  
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
 
   useEffect(() => {
     const avatar = localStorage.getItem('avatarImage');
@@ -84,15 +88,48 @@ const Stylist = () => {
     randomizeOutfit();
   };
 
+  const handleTouchStart = (e: TouchEvent, zone: 'top' | 'bottom' | 'shoes') => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    setActiveSwipeZone(zone);
+  };
+
+  const handleTouchEnd = (e: TouchEvent, zone: 'top' | 'bottom' | 'shoes') => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
+    
+    // Only register as swipe if horizontal movement is greater than vertical
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+      if (deltaX > 0) {
+        cycleItem(zone, 'next');
+      } else {
+        cycleItem(zone, 'prev');
+      }
+    }
+    
+    setActiveSwipeZone(null);
+  };
+
+  const resetAvatar = () => {
+    navigate('/setup');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       {/* Header */}
       <nav className="border-b border-border bg-background/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/setup">
-              <h1 className="font-serif text-2xl font-bold text-foreground">Ntoulapa</h1>
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link to="/setup">
+                <h1 className="font-serif text-2xl font-bold text-foreground">Ntoulapa</h1>
+              </Link>
+              <Button variant="ghost" size="sm" onClick={resetAvatar}>
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            </div>
             <Link to="/favorites">
               <Button variant="ghost" size="sm">
                 <Heart className="w-5 h-5 mr-2" />
@@ -116,34 +153,77 @@ const Stylist = () => {
 
         {/* Avatar with Outfit Overlay */}
         <div className="relative mb-8">
-          <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-strong bg-muted">
+          <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-strong bg-muted relative">
             {avatarImage && (
               <img 
                 src={avatarImage} 
                 alt="Your avatar" 
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             )}
             
-            {/* Outfit items overlaid (simplified visual representation) */}
-            <div className="absolute inset-0 flex flex-col justify-between p-4 pointer-events-none">
+            {/* Outfit items overlaid positioned on body */}
+            <div className="absolute inset-0">
+              {/* Top - positioned on torso (20-50% from top) */}
               {currentOutfit.top && (
-                <div className="h-1/3 rounded-lg overflow-hidden shadow-medium opacity-80">
-                  <img src={currentOutfit.top} alt="Top" className="w-full h-full object-cover" />
+                <div 
+                  className={`absolute left-1/2 -translate-x-1/2 w-[60%] h-[30%] top-[20%] transition-opacity ${
+                    activeSwipeZone === 'top' ? 'opacity-70' : 'opacity-90'
+                  }`}
+                  onTouchStart={(e) => handleTouchStart(e, 'top')}
+                  onTouchEnd={(e) => handleTouchEnd(e, 'top')}
+                  style={{ touchAction: 'none' }}
+                >
+                  <img 
+                    src={currentOutfit.top} 
+                    alt="Top" 
+                    className="w-full h-full object-contain drop-shadow-lg pointer-events-none" 
+                  />
                 </div>
               )}
+              
+              {/* Bottom - positioned on legs (50-75% from top) */}
               {currentOutfit.bottom && (
-                <div className="h-1/3 rounded-lg overflow-hidden shadow-medium opacity-80">
-                  <img src={currentOutfit.bottom} alt="Bottom" className="w-full h-full object-cover" />
+                <div 
+                  className={`absolute left-1/2 -translate-x-1/2 w-[55%] h-[30%] top-[48%] transition-opacity ${
+                    activeSwipeZone === 'bottom' ? 'opacity-70' : 'opacity-90'
+                  }`}
+                  onTouchStart={(e) => handleTouchStart(e, 'bottom')}
+                  onTouchEnd={(e) => handleTouchEnd(e, 'bottom')}
+                  style={{ touchAction: 'none' }}
+                >
+                  <img 
+                    src={currentOutfit.bottom} 
+                    alt="Bottom" 
+                    className="w-full h-full object-contain drop-shadow-lg pointer-events-none" 
+                  />
                 </div>
               )}
+              
+              {/* Shoes - positioned on feet (75-90% from top) */}
               {currentOutfit.shoes && (
-                <div className="h-1/4 rounded-lg overflow-hidden shadow-medium opacity-80">
-                  <img src={currentOutfit.shoes} alt="Shoes" className="w-full h-full object-cover" />
+                <div 
+                  className={`absolute left-1/2 -translate-x-1/2 w-[40%] h-[15%] top-[78%] transition-opacity ${
+                    activeSwipeZone === 'shoes' ? 'opacity-70' : 'opacity-90'
+                  }`}
+                  onTouchStart={(e) => handleTouchStart(e, 'shoes')}
+                  onTouchEnd={(e) => handleTouchEnd(e, 'shoes')}
+                  style={{ touchAction: 'none' }}
+                >
+                  <img 
+                    src={currentOutfit.shoes} 
+                    alt="Shoes" 
+                    className="w-full h-full object-contain drop-shadow-lg pointer-events-none" 
+                  />
                 </div>
               )}
             </div>
           </div>
+          
+          {/* Swipe instruction */}
+          <p className="text-center text-sm text-muted-foreground mt-4">
+            Swipe left or right on clothing items to change
+          </p>
         </div>
 
         {/* Swipe Controls */}
