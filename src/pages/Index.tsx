@@ -12,10 +12,10 @@ const Index = () => {
           <div className="flex justify-between items-center h-16">
             <h1 className="font-serif text-2xl font-bold text-foreground">Ntoulapa</h1>
             <div className="flex items-center gap-4">
-              <Link to="/closet">
+              <Link to="/setup">
                 <Button variant="ghost">My Closet</Button>
               </Link>
-              <Link to="/outfits">
+              <Link to="/stylist">
                 <Button variant="secondary">Get Started</Button>
               </Link>
             </div>
@@ -39,12 +39,12 @@ const Index = () => {
                 Transform your closet chaos into stylish confidence. Ntoulapa organizes your wardrobe digitally and delivers personalized outfit recommendations powered by AI.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/closet">
+                <Link to="/setup">
                   <Button variant="hero" size="lg">
                     Start Your Closet
                   </Button>
                 </Link>
-                <Link to="/outfits">
+                <Link to="/stylist">
                   <Button variant="accent" size="lg">
                     See AI Outfits
                   </Button>
@@ -127,7 +127,7 @@ const Index = () => {
           <p className="text-primary-foreground/90 text-lg mb-8 max-w-2xl mx-auto">
             Join thousands who've already discovered their perfect style with Ntoulapa's AI-powered wardrobe assistant.
           </p>
-          <Link to="/closet">
+          <Link to="/setup">
             <Button variant="accent" size="lg" className="text-lg px-10">
               Get Started Free
             </Button>
