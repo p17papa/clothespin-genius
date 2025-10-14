@@ -7,46 +7,49 @@ import { toast } from "sonner";
 interface OutfitCombination {
   top?: string;
   bottom?: string;
-  shoes?: string;
 }
 
 const Stylist = () => {
   const navigate = useNavigate();
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
-  const [clothingItems, setClothingItems] = useState<string[]>([]);
+  const [tops, setTops] = useState<string[]>([]);
+  const [bottoms, setBottoms] = useState<string[]>([]);
   const [currentOutfit, setCurrentOutfit] = useState<OutfitCombination>({});
-  const [currentIndices, setCurrentIndices] = useState({ top: 0, bottom: 0, shoes: 0 });
+  const [currentIndices, setCurrentIndices] = useState({ top: 0, bottom: 0 });
   const [likedOutfits, setLikedOutfits] = useState<OutfitCombination[]>([]);
-  const [activeSwipeZone, setActiveSwipeZone] = useState<'top' | 'bottom' | 'shoes' | null>(null);
+  const [activeSwipeZone, setActiveSwipeZone] = useState<'top' | 'bottom' | null>(null);
   
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
 
   useEffect(() => {
     const avatar = localStorage.getItem('avatarImage');
-    const items = localStorage.getItem('clothingItems');
+    const savedTops = localStorage.getItem('tops');
+    const savedBottoms = localStorage.getItem('bottoms');
     
-    if (!avatar || !items) {
+    if (!avatar || !savedTops || !savedBottoms) {
       navigate('/setup');
       return;
     }
     
     setAvatarImage(avatar);
-    const parsedItems = JSON.parse(items);
-    setClothingItems(parsedItems);
+    const parsedTops = JSON.parse(savedTops);
+    const parsedBottoms = JSON.parse(savedBottoms);
+    setTops(parsedTops);
+    setBottoms(parsedBottoms);
     
     // Initialize with first items
-    if (parsedItems.length > 0) {
+    if (parsedTops.length > 0 && parsedBottoms.length > 0) {
       setCurrentOutfit({
-        top: parsedItems[0],
-        bottom: parsedItems[1] || parsedItems[0],
-        shoes: parsedItems[2] || parsedItems[0],
+        top: parsedTops[0],
+        bottom: parsedBottoms[0],
       });
     }
   }, [navigate]);
 
-  const cycleItem = (category: 'top' | 'bottom' | 'shoes', direction: 'next' | 'prev') => {
-    const itemCount = clothingItems.length;
+  const cycleItem = (category: 'top' | 'bottom', direction: 'next' | 'prev') => {
+    const items = category === 'top' ? tops : bottoms;
+    const itemCount = items.length;
     if (itemCount === 0) return;
 
     const currentIndex = currentIndices[category];
@@ -59,21 +62,19 @@ const Stylist = () => {
     }
 
     setCurrentIndices(prev => ({ ...prev, [category]: newIndex }));
-    setCurrentOutfit(prev => ({ ...prev, [category]: clothingItems[newIndex] }));
+    setCurrentOutfit(prev => ({ ...prev, [category]: items[newIndex] }));
   };
 
   const randomizeOutfit = () => {
-    if (clothingItems.length === 0) return;
+    if (tops.length === 0 || bottoms.length === 0) return;
     
-    const randomTop = Math.floor(Math.random() * clothingItems.length);
-    const randomBottom = Math.floor(Math.random() * clothingItems.length);
-    const randomShoes = Math.floor(Math.random() * clothingItems.length);
+    const randomTop = Math.floor(Math.random() * tops.length);
+    const randomBottom = Math.floor(Math.random() * bottoms.length);
     
-    setCurrentIndices({ top: randomTop, bottom: randomBottom, shoes: randomShoes });
+    setCurrentIndices({ top: randomTop, bottom: randomBottom });
     setCurrentOutfit({
-      top: clothingItems[randomTop],
-      bottom: clothingItems[randomBottom],
-      shoes: clothingItems[randomShoes],
+      top: tops[randomTop],
+      bottom: bottoms[randomBottom],
     });
     
     toast.success("New outfit generated!");
@@ -88,13 +89,13 @@ const Stylist = () => {
     randomizeOutfit();
   };
 
-  const handleTouchStart = (e: TouchEvent, zone: 'top' | 'bottom' | 'shoes') => {
+  const handleTouchStart = (e: TouchEvent, zone: 'top' | 'bottom') => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     setActiveSwipeZone(zone);
   };
 
-  const handleTouchEnd = (e: TouchEvent, zone: 'top' | 'bottom' | 'shoes') => {
+  const handleTouchEnd = (e: TouchEvent, zone: 'top' | 'bottom') => {
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
     const deltaX = touchEndX - touchStartX.current;
@@ -164,56 +165,38 @@ const Stylist = () => {
             
             {/* Outfit items overlaid positioned on body */}
             <div className="absolute inset-0">
-              {/* Top - positioned on torso (20-50% from top) */}
+              {/* Top - positioned on torso (15-50% from top) */}
               {currentOutfit.top && (
                 <div 
-                  className={`absolute left-1/2 -translate-x-1/2 w-[60%] h-[30%] top-[20%] transition-opacity ${
+                  className={`absolute left-1/2 -translate-x-1/2 w-[70%] top-[15%] transition-opacity ${
                     activeSwipeZone === 'top' ? 'opacity-70' : 'opacity-90'
                   }`}
                   onTouchStart={(e) => handleTouchStart(e, 'top')}
                   onTouchEnd={(e) => handleTouchEnd(e, 'top')}
-                  style={{ touchAction: 'none' }}
+                  style={{ touchAction: 'none', maxHeight: '35%' }}
                 >
                   <img 
                     src={currentOutfit.top} 
                     alt="Top" 
-                    className="w-full h-full object-contain drop-shadow-lg pointer-events-none" 
+                    className="w-full h-auto object-contain drop-shadow-lg pointer-events-none" 
                   />
                 </div>
               )}
               
-              {/* Bottom - positioned on legs (50-75% from top) */}
+              {/* Bottom - positioned on legs (48-80% from top) */}
               {currentOutfit.bottom && (
                 <div 
-                  className={`absolute left-1/2 -translate-x-1/2 w-[55%] h-[30%] top-[48%] transition-opacity ${
+                  className={`absolute left-1/2 -translate-x-1/2 w-[65%] top-[48%] transition-opacity ${
                     activeSwipeZone === 'bottom' ? 'opacity-70' : 'opacity-90'
                   }`}
                   onTouchStart={(e) => handleTouchStart(e, 'bottom')}
                   onTouchEnd={(e) => handleTouchEnd(e, 'bottom')}
-                  style={{ touchAction: 'none' }}
+                  style={{ touchAction: 'none', maxHeight: '40%' }}
                 >
                   <img 
                     src={currentOutfit.bottom} 
                     alt="Bottom" 
-                    className="w-full h-full object-contain drop-shadow-lg pointer-events-none" 
-                  />
-                </div>
-              )}
-              
-              {/* Shoes - positioned on feet (75-90% from top) */}
-              {currentOutfit.shoes && (
-                <div 
-                  className={`absolute left-1/2 -translate-x-1/2 w-[40%] h-[15%] top-[78%] transition-opacity ${
-                    activeSwipeZone === 'shoes' ? 'opacity-70' : 'opacity-90'
-                  }`}
-                  onTouchStart={(e) => handleTouchStart(e, 'shoes')}
-                  onTouchEnd={(e) => handleTouchEnd(e, 'shoes')}
-                  style={{ touchAction: 'none' }}
-                >
-                  <img 
-                    src={currentOutfit.shoes} 
-                    alt="Shoes" 
-                    className="w-full h-full object-contain drop-shadow-lg pointer-events-none" 
+                    className="w-full h-auto object-contain drop-shadow-lg pointer-events-none" 
                   />
                 </div>
               )}
@@ -264,27 +247,6 @@ const Stylist = () => {
                 variant="outline"
                 size="icon"
                 onClick={() => cycleItem('bottom', 'next')}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Shoes Control */}
-          <div className="bg-card rounded-xl p-4 shadow-soft flex items-center justify-between">
-            <span className="font-semibold text-foreground">Shoes</span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => cycleItem('shoes', 'prev')}
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => cycleItem('shoes', 'next')}
               >
                 <ChevronRight className="w-5 h-5" />
               </Button>

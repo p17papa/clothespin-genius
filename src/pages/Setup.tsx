@@ -9,18 +9,24 @@ import { removeBackground, loadImage, blobToDataUrl } from "@/lib/backgroundRemo
 const Setup = () => {
   const navigate = useNavigate();
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
-  const [clothingItems, setClothingItems] = useState<string[]>([]);
+  const [tops, setTops] = useState<string[]>([]);
+  const [bottoms, setBottoms] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [captureMode, setCaptureMode] = useState<'top' | 'bottom'>('top');
 
   useEffect(() => {
     const savedAvatar = localStorage.getItem('avatarImage');
-    const savedItems = localStorage.getItem('clothingItems');
+    const savedTops = localStorage.getItem('tops');
+    const savedBottoms = localStorage.getItem('bottoms');
     
     if (savedAvatar) {
       setAvatarImage(savedAvatar);
     }
-    if (savedItems) {
-      setClothingItems(JSON.parse(savedItems));
+    if (savedTops) {
+      setTops(JSON.parse(savedTops));
+    }
+    if (savedBottoms) {
+      setBottoms(JSON.parse(savedBottoms));
     }
   }, []);
 
@@ -68,10 +74,17 @@ const Setup = () => {
       });
       
       if (image.dataUrl) {
-        const newItems = [...clothingItems, image.dataUrl];
-        setClothingItems(newItems);
-        localStorage.setItem('clothingItems', JSON.stringify(newItems));
-        toast.success(`${newItems.length} items captured`);
+        if (captureMode === 'top') {
+          const newTops = [...tops, image.dataUrl];
+          setTops(newTops);
+          localStorage.setItem('tops', JSON.stringify(newTops));
+          toast.success(`Top captured (${newTops.length} total)`);
+        } else {
+          const newBottoms = [...bottoms, image.dataUrl];
+          setBottoms(newBottoms);
+          localStorage.setItem('bottoms', JSON.stringify(newBottoms));
+          toast.success(`Bottom captured (${newBottoms.length} total)`);
+        }
       }
     } catch (error) {
       console.error('Error capturing photo:', error);
@@ -84,14 +97,10 @@ const Setup = () => {
       toast.error("Please capture your body photo first");
       return;
     }
-    if (clothingItems.length === 0) {
-      toast.error("Please capture at least one clothing item");
+    if (tops.length === 0 || bottoms.length === 0) {
+      toast.error("Please capture at least one top and one bottom");
       return;
     }
-    
-    // Store in localStorage for now
-    localStorage.setItem('avatarImage', avatarImage);
-    localStorage.setItem('clothingItems', JSON.stringify(clothingItems));
     
     navigate('/stylist');
   };
@@ -188,16 +197,34 @@ const Setup = () => {
             </h2>
           </div>
 
+          {/* Category Tabs */}
+          <div className="flex gap-2 mb-6">
+            <Button
+              variant={captureMode === 'top' ? 'default' : 'outline'}
+              onClick={() => setCaptureMode('top')}
+              className="flex-1"
+            >
+              Tops ({tops.length})
+            </Button>
+            <Button
+              variant={captureMode === 'bottom' ? 'default' : 'outline'}
+              onClick={() => setCaptureMode('bottom')}
+              className="flex-1"
+            >
+              Bottoms ({bottoms.length})
+            </Button>
+          </div>
+
           <div className="grid grid-cols-3 gap-4 mb-6">
-            {clothingItems.map((item, idx) => (
+            {(captureMode === 'top' ? tops : bottoms).map((item, idx) => (
               <div 
                 key={idx}
-                className="aspect-square rounded-lg overflow-hidden shadow-soft"
+                className="aspect-square rounded-lg overflow-hidden shadow-soft bg-muted"
               >
                 <img 
                   src={item} 
-                  alt={`Clothing ${idx + 1}`}
-                  className="w-full h-full object-cover"
+                  alt={`${captureMode} ${idx + 1}`}
+                  className="w-full h-full object-contain"
                 />
               </div>
             ))}
@@ -207,14 +234,14 @@ const Setup = () => {
               className="aspect-square rounded-lg border-2 border-dashed border-border bg-muted/30 hover:bg-muted/50 transition-colors flex flex-col items-center justify-center gap-2 group"
             >
               <Camera className="w-8 h-8 text-muted-foreground group-hover:text-foreground transition-colors" />
-              <p className="text-xs text-muted-foreground font-medium">Add Item</p>
+              <p className="text-xs text-muted-foreground font-medium">Add {captureMode === 'top' ? 'Top' : 'Bottom'}</p>
             </button>
           </div>
 
           <p className="text-sm text-muted-foreground text-center">
-            {clothingItems.length === 0 
-              ? "Capture all your tops, bottoms, and shoes" 
-              : `${clothingItems.length} items captured`}
+            {tops.length === 0 && bottoms.length === 0
+              ? "Capture your tops and bottoms separately" 
+              : `${tops.length} tops, ${bottoms.length} bottoms captured`}
           </p>
         </div>
 
@@ -224,7 +251,7 @@ const Setup = () => {
           size="lg"
           className="w-full"
           onClick={handleContinue}
-          disabled={!avatarImage || clothingItems.length === 0}
+          disabled={!avatarImage || tops.length === 0 || bottoms.length === 0}
         >
           Continue to Stylist
           <ArrowRight className="w-5 h-5 ml-2" />
