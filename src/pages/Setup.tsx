@@ -66,6 +66,9 @@ const Setup = () => {
 
   const captureClothing = async () => {
     try {
+      setIsProcessing(true);
+      toast.info("Capturing photo...");
+      
       const image = await CapCamera.getPhoto({
         quality: 90,
         allowEditing: false,
@@ -74,13 +77,20 @@ const Setup = () => {
       });
       
       if (image.dataUrl) {
+        toast.info("Removing background...");
+        
+        // Remove background from clothing item
+        const img = await loadImage(image.dataUrl);
+        const processedBlob = await removeBackground(img);
+        const processedDataUrl = await blobToDataUrl(processedBlob);
+        
         if (captureMode === 'top') {
-          const newTops = [...tops, image.dataUrl];
+          const newTops = [...tops, processedDataUrl];
           setTops(newTops);
           localStorage.setItem('tops', JSON.stringify(newTops));
           toast.success(`Top captured (${newTops.length} total)`);
         } else {
-          const newBottoms = [...bottoms, image.dataUrl];
+          const newBottoms = [...bottoms, processedDataUrl];
           setBottoms(newBottoms);
           localStorage.setItem('bottoms', JSON.stringify(newBottoms));
           toast.success(`Bottom captured (${newBottoms.length} total)`);
@@ -89,6 +99,8 @@ const Setup = () => {
     } catch (error) {
       console.error('Error capturing photo:', error);
       toast.error("Failed to capture photo");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -231,10 +243,17 @@ const Setup = () => {
             
             <button
               onClick={captureClothing}
-              className="aspect-square rounded-lg border-2 border-dashed border-border bg-muted/30 hover:bg-muted/50 transition-colors flex flex-col items-center justify-center gap-2 group"
+              disabled={isProcessing}
+              className="aspect-square rounded-lg border-2 border-dashed border-border bg-muted/30 hover:bg-muted/50 transition-colors flex flex-col items-center justify-center gap-2 group disabled:opacity-50"
             >
-              <Camera className="w-8 h-8 text-muted-foreground group-hover:text-foreground transition-colors" />
-              <p className="text-xs text-muted-foreground font-medium">Add {captureMode === 'top' ? 'Top' : 'Bottom'}</p>
+              {isProcessing ? (
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              ) : (
+                <>
+                  <Camera className="w-8 h-8 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  <p className="text-xs text-muted-foreground font-medium">Add {captureMode === 'top' ? 'Top' : 'Bottom'}</p>
+                </>
+              )}
             </button>
           </div>
 
