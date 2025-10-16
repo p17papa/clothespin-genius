@@ -1,9 +1,35 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Upload, Shirt, Wand2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Sparkles, Upload, Shirt, Wand2, Settings } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-wardrobe.jpg";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const [avatarImage, setAvatarImage] = useState<string | null>(null);
+  const [currentOutfit, setCurrentOutfit] = useState<{ top?: string; bottom?: string }>({});
+  const [hasWardrobe, setHasWardrobe] = useState(false);
+
+  useEffect(() => {
+    const avatar = localStorage.getItem('avatarImage');
+    const savedTops = localStorage.getItem('tops');
+    const savedBottoms = localStorage.getItem('bottoms');
+    
+    if (avatar && savedTops && savedBottoms) {
+      setAvatarImage(avatar);
+      const tops = JSON.parse(savedTops);
+      const bottoms = JSON.parse(savedBottoms);
+      setHasWardrobe(tops.length > 0 && bottoms.length > 0);
+      
+      if (tops.length > 0 && bottoms.length > 0) {
+        setCurrentOutfit({
+          top: tops[0],
+          bottom: bottoms[0],
+        });
+      }
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       {/* Navigation */}
@@ -13,56 +39,114 @@ const Index = () => {
             <h1 className="font-serif text-2xl font-bold text-foreground">Ntoulapa</h1>
             <div className="flex items-center gap-4">
               <Link to="/setup">
-                <Button variant="ghost">My Closet</Button>
-              </Link>
-              <Link to="/stylist">
-                <Button variant="secondary">Get Started</Button>
+                <Button variant="ghost">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Wardrobe
+                </Button>
               </Link>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Hero Section - Shows avatar if available */}
       <section className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full text-sm font-medium text-accent-foreground">
-                <Sparkles className="w-4 h-4" />
-                AI-Powered Styling
+          {hasWardrobe && avatarImage ? (
+            <div className="max-w-3xl mx-auto">
+              <div className="text-center mb-8">
+                <h2 className="font-serif text-4xl font-bold text-foreground mb-4">
+                  Your Virtual Closet
+                </h2>
+                <p className="text-lg text-muted-foreground">
+                  Ready to try on some outfits?
+                </p>
               </div>
-              <h2 className="font-serif text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-                Never Say "I Have Nothing to Wear" Again
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                Transform your closet chaos into stylish confidence. Ntoulapa organizes your wardrobe digitally and delivers personalized outfit recommendations powered by AI.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/setup">
-                  <Button variant="hero" size="lg">
-                    Start Your Closet
+
+              {/* Avatar Preview with Current Outfit */}
+              <div className="relative mb-8">
+                <div className="aspect-[3/4] max-w-md mx-auto rounded-2xl overflow-hidden shadow-strong bg-muted relative">
+                  <img 
+                    src={avatarImage} 
+                    alt="Your avatar" 
+                    className="w-full h-full object-contain"
+                  />
+                  
+                  {/* Current outfit overlay */}
+                  <div className="absolute inset-0">
+                    {currentOutfit.top && (
+                      <div className="absolute left-1/2 -translate-x-1/2 w-[70%] top-[15%]" style={{ maxHeight: '35%' }}>
+                        <img 
+                          src={currentOutfit.top} 
+                          alt="Top" 
+                          className="w-full h-auto object-contain drop-shadow-lg" 
+                        />
+                      </div>
+                    )}
+                    
+                    {currentOutfit.bottom && (
+                      <div className="absolute left-1/2 -translate-x-1/2 w-[65%] top-[48%]" style={{ maxHeight: '40%' }}>
+                        <img 
+                          src={currentOutfit.bottom} 
+                          alt="Bottom" 
+                          className="w-full h-auto object-contain drop-shadow-lg" 
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+                <Link to="/stylist" className="flex-1">
+                  <Button variant="hero" size="lg" className="w-full">
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Try On Clothes
                   </Button>
                 </Link>
-                <Link to="/stylist">
-                  <Button variant="accent" size="lg">
-                    See AI Outfits
+                <Link to="/setup" className="flex-1">
+                  <Button variant="secondary" size="lg" className="w-full">
+                    <Shirt className="w-5 h-5 mr-2" />
+                    Manage Wardrobe
                   </Button>
                 </Link>
               </div>
             </div>
-            <div className="relative">
-              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-strong">
-                <img 
-                  src={heroImage} 
-                  alt="Elegant wardrobe organization" 
-                  className="w-full h-full object-cover"
-                />
+          ) : (
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div className="space-y-8">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full text-sm font-medium text-accent-foreground">
+                  <Sparkles className="w-4 h-4" />
+                  AI-Powered Styling
+                </div>
+                <h2 className="font-serif text-5xl lg:text-6xl font-bold text-foreground leading-tight">
+                  Never Say "I Have Nothing to Wear" Again
+                </h2>
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  Transform your closet chaos into stylish confidence. Ntoulapa organizes your wardrobe digitally and delivers personalized outfit recommendations powered by AI.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Link to="/setup">
+                    <Button variant="hero" size="lg">
+                      Start Your Closet
+                    </Button>
+                  </Link>
+                </div>
               </div>
-              <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-gradient-accent rounded-full blur-3xl opacity-30" />
-              <div className="absolute -top-6 -right-6 w-40 h-40 bg-gradient-hero rounded-full blur-3xl opacity-20" />
+              <div className="relative">
+                <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-strong">
+                  <img 
+                    src={heroImage} 
+                    alt="Elegant wardrobe organization" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-gradient-accent rounded-full blur-3xl opacity-30" />
+                <div className="absolute -top-6 -right-6 w-40 h-40 bg-gradient-hero rounded-full blur-3xl opacity-20" />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 

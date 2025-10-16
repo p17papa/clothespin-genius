@@ -34,7 +34,7 @@ function resizeImageIfNeeded(canvas: HTMLCanvasElement, ctx: CanvasRenderingCont
 export const removeBackground = async (imageElement: HTMLImageElement): Promise<Blob> => {
   try {
     console.log('Starting background removal process...');
-    const segmenter = await pipeline('image-segmentation', 'Xenova/segformer-b0-finetuned-ade-512-512', {
+    const segmenter = await pipeline('image-segmentation', 'Xenova/segformer-b2-clothes', {
       device: 'webgpu',
     });
     
@@ -67,7 +67,8 @@ export const removeBackground = async (imageElement: HTMLImageElement): Promise<
     const data = outputImageData.data;
     
     for (let i = 0; i < result[0].mask.data.length; i++) {
-      const alpha = Math.round((1 - result[0].mask.data[i]) * 255);
+      const maskValue = result[0].mask.data[i];
+      const alpha = Math.round(maskValue * 255);
       data[i * 4 + 3] = alpha;
     }
     
