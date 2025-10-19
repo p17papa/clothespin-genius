@@ -45,14 +45,16 @@ export const removeBackground = async (imageElement: HTMLImageElement): Promise<
     
     resizeImageIfNeeded(canvas, ctx, imageElement);
     
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    const imageData = canvas.toDataURL('image/jpeg', 0.95);
     
     console.log('Processing with segmentation model...');
     const result = await segmenter(imageData);
     
-    if (!result || !Array.isArray(result) || result.length === 0 || !result[0].mask) {
+    if (!result || !Array.isArray(result) || result.length === 0) {
       throw new Error('Invalid segmentation result');
     }
+    
+    console.log('Segmentation complete, found', result.length, 'segments');
     
     const outputCanvas = document.createElement('canvas');
     outputCanvas.width = canvas.width;
@@ -66,14 +68,64 @@ export const removeBackground = async (imageElement: HTMLImageElement): Promise<
     const outputImageData = outputCtx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
     const data = outputImageData.data;
     
-    for (let i = 0; i < result[0].mask.data.length; i++) {
-      const maskValue = result[0].mask.data[i];
+    // Create a combined mask from all detected segments (clothes, person, etc.)
+    const combinedMask = new Float32Array(outputCanvas.width * outputCanvas.height);
+    
+    // Combine all relevant masks (excluding background)
+    for (const segment of result) {
+      const label = segment.label.toLowerCase();
+      // Include person, clothing items, but exclude background
+      if (label !== 'background' && label !== 'wall' && label !== 'floor' && segment.mask) {
+        console.log('Including segment:', label, 'with score:', segment.score);
+        for (let i = 0; i < segment.mask.data.length; i++) {
+          combinedMask[i] = Math.max(combinedMask[i], segment.mask.data[i]);
+        }
+      }
+    }
+    
+    // Apply aggressive threshold and edge refinement
+    const threshold = 0.3; // Lower threshold to capture more of the subject
+    for (let i = 0; i < combinedMask.length; i++) {
+      let maskValue = combinedMask[i];
+      
+      // Apply threshold
+      if (maskValue < threshold) {
+        maskValue = 0;
+      } else {
+        // Smooth the edges with a slight curve
+        maskValue = Math.pow((maskValue - threshold) / (1 - threshold), 0.7);
+      }
+      
       const alpha = Math.round(maskValue * 255);
       data[i * 4 + 3] = alpha;
     }
     
-    outputCtx.putImageData(outputImageData, 0, 0);
-    console.log('Mask applied successfully');
+    // Apply edge smoothing
+    const smoothedData = new Uint8ClampedArray(data);
+    const width = outputCanvas.width;
+    const height = outputCanvas.height;
+    
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = (y * width + x) * 4;
+        const centerAlpha = data[idx + 3];
+        
+        if (centerAlpha > 0 && centerAlpha < 255) {
+          // Average with neighbors for smoother edges
+          const neighbors = [
+            data[((y - 1) * width + x) * 4 + 3],
+            data[((y + 1) * width + x) * 4 + 3],
+            data[(y * width + (x - 1)) * 4 + 3],
+            data[(y * width + (x + 1)) * 4 + 3],
+          ];
+          const avgAlpha = (centerAlpha + neighbors.reduce((a, b) => a + b, 0)) / 5;
+          smoothedData[idx + 3] = Math.round(avgAlpha);
+        }
+      }
+    }
+    
+    outputCtx.putImageData(new ImageData(smoothedData, width, height), 0, 0);
+    console.log('Mask applied and refined successfully');
     
     return new Promise((resolve, reject) => {
       outputCanvas.toBlob(
