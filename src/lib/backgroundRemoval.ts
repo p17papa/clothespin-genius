@@ -127,11 +127,27 @@ export const removeBackground = async (imageElement: HTMLImageElement): Promise<
     outputCtx.putImageData(new ImageData(smoothedData, width, height), 0, 0);
     console.log('Mask applied and refined successfully');
     
+    // Create final canvas with white background
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = width;
+    finalCanvas.height = height;
+    const finalCtx = finalCanvas.getContext('2d');
+    
+    if (!finalCtx) throw new Error('Could not get final canvas context');
+    
+    // Fill with white background
+    finalCtx.fillStyle = '#FFFFFF';
+    finalCtx.fillRect(0, 0, width, height);
+    
+    // Draw the transparent image on top
+    finalCtx.drawImage(outputCanvas, 0, 0);
+    console.log('White background added successfully');
+    
     return new Promise((resolve, reject) => {
-      outputCanvas.toBlob(
+      finalCanvas.toBlob(
         (blob) => {
           if (blob) {
-            console.log('Successfully created final blob');
+            console.log('Successfully created final blob with white background');
             resolve(blob);
           } else {
             reject(new Error('Failed to create blob'));
