@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Heart, ArrowLeft } from "lucide-react";
+import { Heart, ArrowLeft, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface OutfitCombination {
@@ -14,9 +14,14 @@ const Favorites = () => {
   const [favorites, setFavorites] = useState<OutfitCombination[]>([]);
 
   useEffect(() => {
-    // In a real app, this would load from persistent storage
-    // For now, it's just a placeholder
+    try { setFavorites(JSON.parse(localStorage.getItem('favorites') || '[]')); } catch { setFavorites([]); }
   }, []);
+
+  const removeFavorite = (idx: number) => {
+    const next = favorites.filter((_, i) => i !== idx);
+    localStorage.setItem('favorites', JSON.stringify(next));
+    setFavorites(next);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -56,22 +61,25 @@ const Favorites = () => {
           <div className="space-y-6">
             {favorites.map((outfit, idx) => (
               <Card key={idx} className="p-4">
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-center">
                   {outfit.top && (
                     <div className="w-24 h-24 rounded-lg overflow-hidden shadow-soft">
-                      <img src={outfit.top} alt="Top" className="w-full h-full object-cover" />
+                      <img src={outfit.top} alt="Top" className="w-full h-full object-contain bg-muted" />
                     </div>
                   )}
                   {outfit.bottom && (
                     <div className="w-24 h-24 rounded-lg overflow-hidden shadow-soft">
-                      <img src={outfit.bottom} alt="Bottom" className="w-full h-full object-cover" />
+                      <img src={outfit.bottom} alt="Bottom" className="w-full h-full object-contain bg-muted" />
                     </div>
                   )}
                   {outfit.shoes && (
                     <div className="w-24 h-24 rounded-lg overflow-hidden shadow-soft">
-                      <img src={outfit.shoes} alt="Shoes" className="w-full h-full object-cover" />
+                      <img src={outfit.shoes} alt="Shoes" className="w-full h-full object-contain bg-muted" />
                     </div>
                   )}
+                  <Button variant="ghost" size="icon" className="ml-auto" onClick={() => removeFavorite(idx)} aria-label="Remove favorite">
+                    <Trash2 className="w-5 h-5" />
+                  </Button>
                 </div>
               </Card>
             ))}
