@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import ClothingFit from "@/components/ClothingFit";
 import { Sparkles, Upload, Shirt, Wand2, Settings } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-wardrobe.jpg";
@@ -75,23 +76,19 @@ const Index = () => {
                   {/* Current outfit overlay */}
                   <div className="absolute inset-0">
                     {currentOutfit.top && (
-                      <div className="absolute left-1/2 -translate-x-1/2 w-[70%] top-[15%]" style={{ maxHeight: '35%' }}>
-                        <img 
-                          src={currentOutfit.top} 
-                          alt="Top" 
-                          className="w-full h-auto object-contain drop-shadow-lg" 
-                        />
-                      </div>
+                      <ClothingFit
+                        src={currentOutfit.top}
+                        alt="Top"
+                        className="left-1/2 -translate-x-1/2 top-[15%] w-[70%] h-[35%]"
+                      />
                     )}
-                    
+
                     {currentOutfit.bottom && (
-                      <div className="absolute left-1/2 -translate-x-1/2 w-[65%] top-[48%]" style={{ maxHeight: '40%' }}>
-                        <img 
-                          src={currentOutfit.bottom} 
-                          alt="Bottom" 
-                          className="w-full h-auto object-contain drop-shadow-lg" 
-                        />
-                      </div>
+                      <ClothingFit
+                        src={currentOutfit.bottom}
+                        alt="Bottom"
+                        className="left-1/2 -translate-x-1/2 top-[48%] w-[65%] h-[40%]"
+                      />
                     )}
                   </div>
                 </div>
