@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Camera, Upload, ArrowRight, User, Loader2 } from "lucide-react";
+import { Camera, Upload, ArrowRight, User, Loader2, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { takePhoto, saveJSON } from "@/lib/photo";
 import { toast } from "sonner";
 import { removeBackground, loadImage, blobToDataUrl } from "@/lib/backgroundRemoval";
 
@@ -30,35 +30,29 @@ const Setup = () => {
     }
   }, []);
 
+  const processPhoto = async (mode: 'white' | 'transparent') => {
+    const dataUrl = await takePhoto();
+    if (!dataUrl) return null;
+    toast.info("Removing background... (first time may take a minute)");
+    const img = await loadImage(dataUrl);
+    const blob = await removeBackground(img, mode);
+    return blobToDataUrl(blob);
+  };
+
   const captureAvatar = async () => {
     try {
       setIsProcessing(true);
-      toast.info("Capturing photo...");
-      
-      const image = await CapCamera.getPhoto({
-        quality: 90,
-        allowEditing: true,
-        resultType: CameraResultType.DataUrl,
-        source: CameraSource.Camera,
-        width: 800,
-        height: 1200,
-      });
-      
-      if (image.dataUrl) {
-        toast.info("Removing background...");
-        
-        // Remove background
-        const img = await loadImage(image.dataUrl);
-        const processedBlob = await removeBackground(img);
-        const processedDataUrl = await blobToDataUrl(processedBlob);
-        
-        setAvatarImage(processedDataUrl);
-        localStorage.setItem('avatarImage', processedDataUrl);
-        toast.success("Body photo captured and processed!");
+      const result = await processPhoto('white');
+      if (!result) return;
+      if (!saveJSON('avatarImage', result)) {
+        toast.error("Phone storage is full. Remove some clothes and try again.");
+        return;
       }
+      setAvatarImage(result);
+      toast.success("Body photo saved!");
     } catch (error) {
-      console.error('Error capturing photo:', error);
-      toast.error("Failed to process photo");
+      console.error('Error processing photo:', error);
+      toast.error("Couldn't process that photo. Try a well-lit photo with your whole body in view.");
     } finally {
       setIsProcessing(false);
     }
@@ -67,41 +61,33 @@ const Setup = () => {
   const captureClothing = async () => {
     try {
       setIsProcessing(true);
-      toast.info("Capturing photo...");
-      
-      const image = await CapCamera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.DataUrl,
-        source: CameraSource.Camera,
-      });
-      
-      if (image.dataUrl) {
-        toast.info("Removing background...");
-        
-        // Remove background from clothing item
-        const img = await loadImage(image.dataUrl);
-        const processedBlob = await removeBackground(img);
-        const processedDataUrl = await blobToDataUrl(processedBlob);
-        
-        if (captureMode === 'top') {
-          const newTops = [...tops, processedDataUrl];
-          setTops(newTops);
-          localStorage.setItem('tops', JSON.stringify(newTops));
-          toast.success(`Top captured (${newTops.length} total)`);
-        } else {
-          const newBottoms = [...bottoms, processedDataUrl];
-          setBottoms(newBottoms);
-          localStorage.setItem('bottoms', JSON.stringify(newBottoms));
-          toast.success(`Bottom captured (${newBottoms.length} total)`);
-        }
+      const result = await processPhoto('transparent');
+      if (!result) return;
+      const key = captureMode === 'top' ? 'tops' : 'bottoms';
+      const list = [...(captureMode === 'top' ? tops : bottoms), result];
+      if (!saveJSON(key, list)) {
+        toast.error("Phone storage is full. Remove some clothes and try again.");
+        return;
       }
+      if (captureMode === 'top') setTops(list); else setBottoms(list);
+      toast.success(`${captureMode === 'top' ? 'Top' : 'Bottom'} added (${list.length} total)`);
     } catch (error) {
-      console.error('Error capturing photo:', error);
-      toast.error("Failed to capture photo");
+      console.error('Error processing photo:', error);
+      toast.error("Couldn't process that photo. Lay the item flat on a plain surface and try again.");
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const deleteItem = (idx: number) => {
+    const key = captureMode === 'top' ? 'tops' : 'bottoms';
+    const list = (captureMode === 'top' ? tops : bottoms).filter((_, i) => i !== idx);
+    saveJSON(key, list);
+    if (captureMode === 'top') setTops(list); else setBottoms(list);
+    const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
+    const removed = (captureMode === 'top' ? tops : bottoms)[idx];
+    saveJSON('favorites', favs.filter((f: any) => f[captureMode] !== removed));
+    toast.success("Item removed");
   };
 
   const handleContinue = () => {
@@ -231,8 +217,15 @@ const Setup = () => {
             {(captureMode === 'top' ? tops : bottoms).map((item, idx) => (
               <div 
                 key={idx}
-                className="aspect-square rounded-lg overflow-hidden shadow-soft bg-muted"
+                className="relative aspect-square rounded-lg overflow-hidden shadow-soft bg-muted"
               >
+                <button
+                  onClick={() => deleteItem(idx)}
+                  aria-label="Remove item"
+                  className="absolute top-1 right-1 z-10 w-7 h-7 rounded-full bg-background/90 text-foreground flex items-center justify-center shadow-soft"
+                >
+                  <X className="w-4 h-4" />
+                </button>
                 <img 
                   src={item} 
                   alt={`${captureMode} ${idx + 1}`}

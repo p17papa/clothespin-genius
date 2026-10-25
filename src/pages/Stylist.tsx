@@ -16,7 +16,9 @@ const Stylist = () => {
   const [bottoms, setBottoms] = useState<string[]>([]);
   const [currentOutfit, setCurrentOutfit] = useState<OutfitCombination>({});
   const [currentIndices, setCurrentIndices] = useState({ top: 0, bottom: 0 });
-  const [likedOutfits, setLikedOutfits] = useState<OutfitCombination[]>([]);
+  const [likedOutfits, setLikedOutfits] = useState<OutfitCombination[]>(() => {
+    try { return JSON.parse(localStorage.getItem('favorites') || '[]'); } catch { return []; }
+  });
   const [activeSwipeZone, setActiveSwipeZone] = useState<'top' | 'bottom' | null>(null);
   
   const touchStartX = useRef<number>(0);
@@ -81,7 +83,18 @@ const Stylist = () => {
   };
 
   const likeOutfit = () => {
-    setLikedOutfits([...likedOutfits, currentOutfit]);
+    if (likedOutfits.some(o => o.top === currentOutfit.top && o.bottom === currentOutfit.bottom)) {
+      toast.info("This outfit is already in your favorites");
+      return;
+    }
+    const next = [...likedOutfits, currentOutfit];
+    try {
+      localStorage.setItem('favorites', JSON.stringify(next));
+    } catch {
+      toast.error("Phone storage is full");
+      return;
+    }
+    setLikedOutfits(next);
     toast.success("Outfit saved to favorites!");
   };
 
@@ -169,7 +182,7 @@ const Stylist = () => {
               {currentOutfit.top && (
                 <div 
                   className={`absolute left-1/2 -translate-x-1/2 w-[70%] top-[15%] transition-opacity ${
-                    activeSwipeZone === 'top' ? 'opacity-70' : 'opacity-90'
+                    activeSwipeZone === 'top' ? 'opacity-80' : 'opacity-100'
                   }`}
                   onTouchStart={(e) => handleTouchStart(e, 'top')}
                   onTouchEnd={(e) => handleTouchEnd(e, 'top')}
@@ -187,7 +200,7 @@ const Stylist = () => {
               {currentOutfit.bottom && (
                 <div 
                   className={`absolute left-1/2 -translate-x-1/2 w-[65%] top-[48%] transition-opacity ${
-                    activeSwipeZone === 'bottom' ? 'opacity-70' : 'opacity-90'
+                    activeSwipeZone === 'bottom' ? 'opacity-80' : 'opacity-100'
                   }`}
                   onTouchStart={(e) => handleTouchStart(e, 'bottom')}
                   onTouchEnd={(e) => handleTouchEnd(e, 'bottom')}
