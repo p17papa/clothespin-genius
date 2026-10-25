@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, TouchEvent } from "react";
 import { Button } from "@/components/ui/button";
+import ClothingFit from "@/components/ClothingFit";
 import { ChevronLeft, ChevronRight, Shuffle, Heart, X, RefreshCw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -178,40 +179,30 @@ const Stylist = () => {
             
             {/* Outfit items overlaid positioned on body */}
             <div className="absolute inset-0">
-              {/* Top - positioned on torso (15-50% from top) */}
+              {/* Top - fitted inside the torso region (15-50% from top) */}
               {currentOutfit.top && (
-                <div 
-                  className={`absolute left-1/2 -translate-x-1/2 w-[70%] top-[15%] transition-opacity ${
-                    activeSwipeZone === 'top' ? 'opacity-80' : 'opacity-100'
-                  }`}
+                <ClothingFit
+                  src={currentOutfit.top}
+                  alt="Top"
+                  className="left-1/2 -translate-x-1/2 top-[15%] w-[70%] h-[35%]"
+                  style={{ touchAction: 'none' }}
+                  dimmed={activeSwipeZone === 'top'}
                   onTouchStart={(e) => handleTouchStart(e, 'top')}
                   onTouchEnd={(e) => handleTouchEnd(e, 'top')}
-                  style={{ touchAction: 'none', maxHeight: '35%' }}
-                >
-                  <img 
-                    src={currentOutfit.top} 
-                    alt="Top" 
-                    className="w-full h-auto object-contain drop-shadow-lg pointer-events-none" 
-                  />
-                </div>
+                />
               )}
-              
-              {/* Bottom - positioned on legs (48-80% from top) */}
+
+              {/* Bottom - fitted inside the legs region (48-88% from top) */}
               {currentOutfit.bottom && (
-                <div 
-                  className={`absolute left-1/2 -translate-x-1/2 w-[65%] top-[48%] transition-opacity ${
-                    activeSwipeZone === 'bottom' ? 'opacity-80' : 'opacity-100'
-                  }`}
+                <ClothingFit
+                  src={currentOutfit.bottom}
+                  alt="Bottom"
+                  className="left-1/2 -translate-x-1/2 top-[48%] w-[65%] h-[40%]"
+                  style={{ touchAction: 'none' }}
+                  dimmed={activeSwipeZone === 'bottom'}
                   onTouchStart={(e) => handleTouchStart(e, 'bottom')}
                   onTouchEnd={(e) => handleTouchEnd(e, 'bottom')}
-                  style={{ touchAction: 'none', maxHeight: '40%' }}
-                >
-                  <img 
-                    src={currentOutfit.bottom} 
-                    alt="Bottom" 
-                    className="w-full h-auto object-contain drop-shadow-lg pointer-events-none" 
-                  />
-                </div>
+                />
               )}
             </div>
           </div>
